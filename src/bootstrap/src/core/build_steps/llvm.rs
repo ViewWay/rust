@@ -244,6 +244,7 @@ pub(crate) fn is_ci_llvm_available_for_target(
         ("loongarch64-unknown-linux-musl", false),
         ("powerpc-unknown-linux-gnu", false),
         ("powerpc64-unknown-linux-gnu", false),
+        ("powerpc64-unknown-linux-musl", false),
         ("powerpc64le-unknown-linux-gnu", false),
         ("powerpc64le-unknown-linux-musl", false),
         ("riscv64gc-unknown-linux-gnu", false),
@@ -1515,6 +1516,7 @@ fn supported_sanitizers(
             "x86_64",
             &["asan", "dfsan", "lsan", "msan", "safestack", "tsan", "rtsan"],
         ),
+        "x86_64-unknown-linux-gnuasan" => common_libs("linux", "x86_64", &["asan"]),
         "x86_64-unknown-linux-musl" => {
             common_libs("linux", "x86_64", &["asan", "lsan", "msan", "tsan"])
         }

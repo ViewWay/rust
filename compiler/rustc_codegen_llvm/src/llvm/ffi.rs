@@ -167,6 +167,7 @@ pub(crate) enum CallConv {
     PreserveMost = 14,
     PreserveAll = 15,
     Tail = 18,
+    PreserveNone = 21,
     X86StdcallCallConv = 64,
     X86FastcallCallConv = 65,
     ArmAapcsCallConv = 67,
@@ -1967,6 +1968,7 @@ unsafe extern "C" {
         Metadata: &'a Metadata,
     );
     pub(crate) fn LLVMRustIsNonGVFunctionPointerTy(Val: &Value) -> bool;
+    pub(crate) fn LLVMRustStripPointerCasts<'a>(Val: &'a Value) -> &'a Value;
 
     // Operations on scalar constants
     pub(crate) fn LLVMRustConstIntGetZExtValue(ConstantVal: &ConstantInt, Value: &mut u64) -> bool;
@@ -2346,6 +2348,7 @@ unsafe extern "C" {
         DebugInfoCompression: CompressionKind,
         UseEmulatedTls: bool,
         UseWasmEH: bool,
+        LargeDataThreshold: u64,
     ) -> *mut TargetMachine;
 
     pub(crate) fn LLVMRustAddLibraryInfo<'a>(
