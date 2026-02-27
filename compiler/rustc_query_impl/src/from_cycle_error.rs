@@ -12,7 +12,6 @@ use rustc_middle::dep_graph::DepKind;
 use rustc_middle::queries::{QueryVTables, TaggedQueryKey};
 use rustc_middle::query::CycleError;
 use rustc_middle::query::erase::erase_val;
-use rustc_middle::ty::layout::LayoutError;
 use rustc_middle::ty::{self, Ty, TyCtxt};
 use rustc_middle::{bug, span_bug};
 use rustc_span::def_id::{DefId, LocalDefId};
@@ -226,8 +225,7 @@ fn layout_of<'tcx>(
         || report_cycle(tcx, &cycle_error),
     );
 
-    let guar = diag.emit();
-    tcx.arena.alloc(LayoutError::Cycle(guar))
+    diag.emit().raise_fatal()
 }
 
 // item_and_field_ids should form a cycle where each field contains the
