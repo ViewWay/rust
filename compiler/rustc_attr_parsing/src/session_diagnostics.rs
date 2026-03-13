@@ -1030,3 +1030,14 @@ pub(crate) struct UnsupportedInstructionSet<'a> {
     pub instruction_set: Symbol,
     pub current_target: &'a TargetTuple,
 }
+
+#[derive(Diagnostic)]
+#[diag("can't mark as unstable using an already stable feature")]
+pub(crate) struct UnstableAttrForAlreadyStableFeature {
+    #[primary_span]
+    #[label("this feature is already stable")]
+    #[help("consider removing the attribute")]
+    pub attr_span: Span,
+    #[label("the stability attribute annotates this item")]
+    pub item_span: Span,
+}
