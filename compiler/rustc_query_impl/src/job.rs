@@ -483,15 +483,21 @@ pub(crate) fn report_cycle<'tcx>(
         });
     }
 
-    let alias = if stack
-        .iter()
-        .all(|entry| matches!(entry.node.tagged_key.def_kind(tcx), Some(DefKind::TyAlias)))
-    {
+    let is_all_def_kind = |def_kind| {
+        stack.iter().all(|entry| match entry.node.tagged_key {
+            TaggedQueryKey::type_of(def_id)
+            | TaggedQueryKey::explicit_implied_predicates_of(def_id)
+                if tcx.def_kind(def_id) == def_kind =>
+            {
+                true
+            }
+            _ => false,
+        })
+    };
+
+    let alias = if is_all_def_kind(DefKind::TyAlias) {
         Some(crate::error::Alias::Ty)
-    } else if stack
-        .iter()
-        .all(|entry| entry.node.tagged_key.def_kind(tcx) == Some(DefKind::TraitAlias))
-    {
+    } else if is_all_def_kind(DefKind::TraitAlias) {
         Some(crate::error::Alias::Trait)
     } else {
         None
