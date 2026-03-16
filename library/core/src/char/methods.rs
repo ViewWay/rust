@@ -777,7 +777,7 @@ impl char {
     #[inline]
     pub fn is_alphabetic(self) -> bool {
         match self {
-            'A'..='Z' | 'a'..='z' => true,
+            'a'..='z' | 'A'..='Z' => true,
             '\0'..='\u{A9}' => false,
             _ => unicode::Alphabetic(self),
         }
@@ -808,7 +808,7 @@ impl char {
     #[inline]
     pub fn is_cased(self) -> bool {
         match self {
-            'A'..='Z' | 'a'..='z' => true,
+            'a'..='z' | 'A'..='Z' => true,
             '\0'..='\u{A9}' => false,
             _ => unicode::Cased(self),
         }
@@ -837,8 +837,8 @@ impl char {
     #[inline]
     pub fn case(self) -> Option<CharCase> {
         match self {
-            'A'..='Z' => Some(CharCase::Upper),
             'a'..='z' => Some(CharCase::Lower),
+            'A'..='Z' => Some(CharCase::Upper),
             '\0'..='\u{A9}' => None,
             _ if !unicode::Cased(self) => None,
             _ if unicode::Lowercase(self) => Some(CharCase::Lower),
@@ -1022,7 +1022,7 @@ impl char {
     #[inline]
     pub fn is_alphanumeric(self) -> bool {
         match self {
-            '0'..='9' | 'A'..='Z' | 'a'..='z' => true,
+            'a'..='z' | 'A'..='Z' | '0'..='9' => true,
             '\0'..='\u{A9}' => false,
             _ => unicode::Alphabetic(self) || unicode::N(self),
         }
@@ -1629,7 +1629,7 @@ impl char {
     #[rustc_const_stable(feature = "const_ascii_ctype_on_intrinsics", since = "1.47.0")]
     #[inline]
     pub const fn is_ascii_alphabetic(&self) -> bool {
-        matches!(*self, 'A'..='Z' | 'a'..='z')
+        matches!(*self, 'a'..='z' | 'A'..='Z')
     }
 
     /// Checks if the value is an ASCII uppercase character:
