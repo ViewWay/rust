@@ -26,10 +26,9 @@ pub use intrinsic::IntrinsicDef;
 use rustc_abi::{
     Align, FieldIdx, Integer, IntegerType, ReprFlags, ReprOptions, ScalableElt, VariantIdx,
 };
-use rustc_ast as ast;
-use rustc_ast::AttrVec;
 use rustc_ast::expand::typetree::{FncTree, Kind, Type, TypeTree};
 use rustc_ast::node_id::NodeMap;
+use rustc_ast::{self as ast, AttrVec, DUMMY_NODE_ID};
 pub use rustc_ast_ir::{Movability, Mutability, try_visit};
 use rustc_data_structures::fx::{FxHashSet, FxIndexMap, FxIndexSet};
 use rustc_data_structures::intern::Interned;
@@ -41,6 +40,7 @@ use rustc_hir as hir;
 use rustc_hir::attrs::StrippedCfgItem;
 use rustc_hir::def::{CtorKind, CtorOf, DefKind, DocLinkResMap, LifetimeRes, Res};
 use rustc_hir::def_id::{CrateNum, DefId, DefIdMap, LocalDefId, LocalDefIdMap};
+use rustc_hir::definitions::DisambiguatorState;
 use rustc_hir::{LangItem, attrs as attr, find_attr};
 use rustc_index::IndexVec;
 use rustc_index::bit_set::BitMatrix;
@@ -228,7 +228,7 @@ pub struct ResolverAstLowering<'tcx> {
 }
 
 bitflags::bitflags! {
-    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+    #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Default)]
     pub struct DelegationFnSigAttrs: u8 {
         const TARGET_FEATURE = 1 << 0;
         const MUST_USE = 1 << 1;
@@ -243,9 +243,20 @@ pub struct DelegationInfo {
     // for details see https://github.com/rust-lang/rust/issues/118212#issuecomment-2160686914
     pub resolution_node: ast::NodeId,
     pub attrs: DelegationAttrs,
+    pub disambig: DisambiguatorState,
 }
 
-#[derive(Debug)]
+impl Default for DelegationInfo {
+    fn default() -> DelegationInfo {
+        DelegationInfo {
+            resolution_node: DUMMY_NODE_ID,
+            attrs: Default::default(),
+            disambig: Default::default(),
+        }
+    }
+}
+
+#[derive(Debug, Default)]
 pub struct DelegationAttrs {
     pub flags: DelegationFnSigAttrs,
     pub to_inherit: AttrVec,

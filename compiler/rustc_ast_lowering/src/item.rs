@@ -7,6 +7,7 @@ use rustc_errors::{E0570, ErrorGuaranteed, struct_span_code_err};
 use rustc_hir::attrs::{AttributeKind, EiiImplResolution};
 use rustc_hir::def::{DefKind, PerNS, Res};
 use rustc_hir::def_id::{CRATE_DEF_ID, LocalDefId};
+use rustc_hir::definitions::DisambiguatorState;
 use rustc_hir::{
     self as hir, HirId, ImplItemImplKind, LifetimeSource, PredicateOrigin, Target, find_attr,
 };
@@ -57,9 +58,10 @@ impl<'hir, R: ResolverAstLoweringExt<'hir>> ItemLowerer<'_, 'hir, R> {
     fn with_lctx(
         &mut self,
         owner: NodeId,
+        disambiguator: DisambiguatorState,
         f: impl FnOnce(&mut LoweringContext<'_, 'hir, R>) -> hir::OwnerNode<'hir>,
     ) {
-        let mut lctx = LoweringContext::new(self.tcx, self.ast_index, self.resolver);
+        let mut lctx = LoweringContext::new(self.tcx, self.ast_index, self.resolver, disambiguator);
         lctx.with_hir_id_owner(owner, |lctx| f(lctx));
 
         for (def_id, info) in lctx.children {
@@ -76,24 +78,34 @@ impl<'hir, R: ResolverAstLoweringExt<'hir>> ItemLowerer<'_, 'hir, R> {
         let owner = self.owners.ensure_contains_elem(def_id, || hir::MaybeOwner::Phantom);
         if let hir::MaybeOwner::Phantom = owner {
             let node = self.ast_index[def_id];
+
+            let disambig = if let Some(info) = self.resolver.delegation_infos.get_mut(&def_id) {
+                // Here we use disambiguator that we saved from resolve stage, as we generate
+                // new def_ids with names from other code, there may be situations when there
+                // will be def path hash collision (see #153410).
+                std::mem::take(&mut info.disambig)
+            } else {
+                DisambiguatorState::new()
+            };
+
             match node {
                 AstOwner::NonOwner => {}
                 AstOwner::Crate(c) => {
                     assert_eq!(self.resolver.local_def_id(CRATE_NODE_ID), CRATE_DEF_ID);
-                    self.with_lctx(CRATE_NODE_ID, |lctx| {
+                    self.with_lctx(CRATE_NODE_ID, disambig, |lctx| {
                         let module = lctx.lower_mod(&c.items, &c.spans);
                         // FIXME(jdonszelman): is dummy span ever a problem here?
                         lctx.lower_attrs(hir::CRATE_HIR_ID, &c.attrs, DUMMY_SP, Target::Crate);
                         hir::OwnerNode::Crate(module)
                     })
                 }
-                AstOwner::Item(item) => {
-                    self.with_lctx(item.id, |lctx| hir::OwnerNode::Item(lctx.lower_item(item)))
-                }
+                AstOwner::Item(item) => self.with_lctx(item.id, disambig, |lctx| {
+                    hir::OwnerNode::Item(lctx.lower_item(item))
+                }),
                 AstOwner::AssocItem(item, ctxt) => {
-                    self.with_lctx(item.id, |lctx| lctx.lower_assoc_item(item, ctxt))
+                    self.with_lctx(item.id, disambig, |lctx| lctx.lower_assoc_item(item, ctxt))
                 }
-                AstOwner::ForeignItem(item) => self.with_lctx(item.id, |lctx| {
+                AstOwner::ForeignItem(item) => self.with_lctx(item.id, disambig, |lctx| {
                     hir::OwnerNode::ForeignItem(lctx.lower_foreign_item(item))
                 }),
             }

@@ -91,6 +91,7 @@ pub mod rustdoc;
 
 pub use macros::registered_tools_ast;
 
+use crate::def_collector::ParentContext;
 use crate::ref_mut::{CmCell, CmRefCell};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -1505,7 +1506,7 @@ impl<'tcx> Resolver<'_, 'tcx> {
     /// Adds a definition with a parent definition.
     fn create_def(
         &mut self,
-        parent: LocalDefId,
+        parent_ctx: ParentContext,
         node_id: ast::NodeId,
         name: Option<Symbol>,
         def_kind: DefKind,
@@ -1520,6 +1521,13 @@ impl<'tcx> Resolver<'_, 'tcx> {
             def_kind,
             self.tcx.definitions_untracked().def_key(self.node_id_to_def_id[&node_id].key()),
         );
+
+        let ParentContext { parent, is_delegation } = parent_ctx;
+
+        if is_delegation {
+            let data = def_kind.def_path_data(name);
+            self.delegation_infos.entry(parent).or_default().disambig.next(parent, data);
+        }
 
         // FIXME: remove `def_span` body, pass in the right spans here and call `tcx.at().create_def()`
         let feed = self.tcx.create_def(parent, name, def_kind, None, &mut self.disambiguator);

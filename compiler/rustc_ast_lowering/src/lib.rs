@@ -163,13 +163,14 @@ impl<'a, 'hir, R: ResolverAstLoweringExt<'hir>> LoweringContext<'a, 'hir, R> {
         tcx: TyCtxt<'hir>,
         ast_index: &'a IndexSlice<LocalDefId, AstOwner<'a>>,
         resolver: &'a mut R,
+        disambiguator: DisambiguatorState,
     ) -> Self {
         let registered_tools = tcx.registered_tools(()).iter().map(|x| x.name).collect();
         Self {
             tcx,
             ast_index,
             resolver,
-            disambiguator: DisambiguatorState::new(),
+            disambiguator,
             arena: tcx.hir_arena,
 
             // HirId handling.
