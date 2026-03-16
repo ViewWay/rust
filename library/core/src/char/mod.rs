@@ -639,6 +639,13 @@ impl Error for TryFromCharError {}
 
 /// The case of a cased character,
 /// as returned by [`char::case`].
+///
+/// Titlecase characters conceptually are composed of an uppercase portion
+/// followed by a lowercase portion.
+/// The variant discriminants represent this:
+/// the most significant bit represents whether the case
+/// conceptually starts as uppercase, while the least significant bit
+/// represents whether it conceptually ends as uppercase.
 #[unstable(feature = "titlecase", issue = "none")]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum CharCase {
