@@ -146,8 +146,6 @@ fn par_slice<I: DynSend>(
         let group_size = items.len().div_ceil(MAX_GROUP_COUNT);
         let mut groups = items.chunks_mut(group_size);
 
-        let Some(first_group) = groups.next() else { return };
-
         // Reverse the order of the later functions since Rayon executes them in reverse
         // order when using a single thread. This ensures the execution order matches
         // that of a single threaded rustc.
@@ -159,12 +157,6 @@ fn par_slice<I: DynSend>(
                     guard.run(|| for_each(i));
                 }
             });
-        }
-
-        // Run the first function without spawning to
-        // ensure it executes immediately on this thread.
-        for i in first_group.iter_mut() {
-            guard.run(|| for_each(i));
         }
     });
 }
