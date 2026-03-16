@@ -9,7 +9,7 @@ use horde::sync_table::Write;
 use rustc_hash::FxBuildHasher;
 
 use crate::sharded::IntoPointer;
-use crate::sync::{DynSync, Lock, LockGuard};
+use crate::sync::{DynSync, Lock, LockGuard, Mode};
 
 pub struct SyncTable<K, V> {
     // We use this lock to protect `table` instead of the internal mutex in `horde::SyncTable`
@@ -111,33 +111,50 @@ impl<K: Eq + Hash + Copy + Send> SyncTable<K, ()> {
         K: Borrow<Q>,
         Q: Hash + Eq,
     {
-        pin(|pin| {
-            let hash = self.hash_key(value);
+        if self.lock.mode() == Mode::Sync {
+            pin(|pin| {
+                let hash = self.hash_key(value);
 
-            let potential = match self.read(pin).get_potential(&value, Some(hash)) {
-                Ok(entry) => return *entry.0,
-                Err(potential) => {
-                    cold_path();
-                    potential
-                }
-            };
+                let potential = match self.read(pin).get_potential(&value, Some(hash)) {
+                    Ok(entry) => return *entry.0,
+                    Err(potential) => {
+                        cold_path();
+                        potential
+                    }
+                };
 
+                let mut write = self.lock();
+
+                let potential = match potential.refresh(self.read(pin), &value, Some(hash)) {
+                    Ok(entry) => {
+                        cold_path();
+                        return *entry.0;
+                    }
+                    Err(potential) => potential,
+                };
+
+                let result = make();
+
+                potential.insert_new(&mut write, result, (), Some(hash));
+
+                result
+            })
+        } else {
             let mut write = self.lock();
 
-            let potential = match potential.refresh(self.read(pin), &value, Some(hash)) {
-                Ok(entry) => {
-                    cold_path();
-                    return *entry.0;
-                }
-                Err(potential) => potential,
-            };
+            let hash = self.hash_key(&value);
+
+            let entry = write.read().get(&value, Some(hash));
+            if let Some(entry) = entry {
+                return *entry.0;
+            }
 
             let result = make();
 
-            potential.insert_new(&mut write, result, (), Some(hash));
+            write.insert_new(result, (), Some(hash));
 
             result
-        })
+        }
     }
 
     #[inline]
@@ -146,32 +163,49 @@ impl<K: Eq + Hash + Copy + Send> SyncTable<K, ()> {
         K: Borrow<Q>,
         Q: Hash + Eq,
     {
-        pin(|pin| {
-            let hash = self.hash_key(&value);
+        if self.lock.mode() == Mode::Sync {
+            pin(|pin| {
+                let hash = self.hash_key(&value);
 
-            let potential = match self.read(pin).get_potential(&value, Some(hash)) {
-                Ok(entry) => return *entry.0,
-                Err(potential) => {
-                    cold_path();
-                    potential
-                }
-            };
+                let potential = match self.read(pin).get_potential(&value, Some(hash)) {
+                    Ok(entry) => return *entry.0,
+                    Err(potential) => {
+                        cold_path();
+                        potential
+                    }
+                };
 
+                let mut write = self.lock();
+
+                let potential = match potential.refresh(self.read(pin), &value, Some(hash)) {
+                    Ok(entry) => {
+                        cold_path();
+                        return *entry.0;
+                    }
+                    Err(potential) => potential,
+                };
+
+                let result = make(value);
+
+                potential.insert_new(&mut write, result, (), Some(hash));
+
+                result
+            })
+        } else {
             let mut write = self.lock();
 
-            let potential = match potential.refresh(self.read(pin), &value, Some(hash)) {
-                Ok(entry) => {
-                    cold_path();
-                    return *entry.0;
-                }
-                Err(potential) => potential,
-            };
+            let hash = self.hash_key(&value);
+
+            let entry = write.read().get(&value, Some(hash));
+            if let Some(entry) = entry {
+                return *entry.0;
+            }
 
             let result = make(value);
 
-            potential.insert_new(&mut write, result, (), Some(hash));
+            write.insert_new(result, (), Some(hash));
 
             result
-        })
+        }
     }
 }
