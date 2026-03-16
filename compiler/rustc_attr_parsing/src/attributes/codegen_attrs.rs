@@ -169,7 +169,7 @@ impl<S: Stage> SingleAttributeParser<S> for RustcObjcClassParser {
             return None;
         };
         let Some(classname) = nv.value_as_str() else {
-            // `#[rustc_objc_class = ...]` is expected to be used as an implementatioin detail
+            // `#[rustc_objc_class = ...]` is expected to be used as an implementation detail
             // inside a standard library macro, but `cx.expected_string_literal` exposes too much.
             // Use a custom error message instead.
             cx.emit_err(ObjcClassExpectedStringLiteral { span: nv.value_span });
@@ -201,7 +201,7 @@ impl<S: Stage> SingleAttributeParser<S> for RustcObjcSelectorParser {
             return None;
         };
         let Some(methname) = nv.value_as_str() else {
-            // `#[rustc_objc_selector = ...]` is expected to be used as an implementatioin detail
+            // `#[rustc_objc_selector = ...]` is expected to be used as an implementation detail
             // inside a standard library macro, but `cx.expected_string_literal` exposes too much.
             // Use a custom error message instead.
             cx.emit_err(ObjcSelectorExpectedStringLiteral { span: nv.value_span });
@@ -283,7 +283,7 @@ impl<S: Stage> AttributeParser<S> for NakedParser {
             sym::instruction_set,
             sym::repr,
             sym::rustc_std_internal_symbol,
-            // FIXME(#82232, #143834): temporarily renamed to mitigate `#[align]` nameres ambiguity
+            // FIXME(#82232, #143834): temporarily renamed to mitigate `#[align]` name ambiguity
             sym::rustc_align,
             sym::rustc_align_static,
             // obviously compatible with self
