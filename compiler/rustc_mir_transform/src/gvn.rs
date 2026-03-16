@@ -1482,6 +1482,33 @@ impl<'body, 'a, 'tcx> VnState<'body, 'a, 'tcx> {
             (BinOp::Eq, a, b) if a == b => self.insert_bool(true),
             (BinOp::Ne, Left(a), Left(b)) => self.insert_bool(a != b),
             (BinOp::Ne, a, b) if a == b => self.insert_bool(false),
+            // When casting from a value, and comparing with a literal
+            // compare the maximum value with this literal
+            // to see if it's possible omit the runtime check
+            (BinOp::Lt, Right(a), Left(b)) if self.max_value_of_cast(a).is_some_and(|a| a < b) => {
+                self.insert_bool(true)
+            }
+            (BinOp::Lt, Left(a), Right(b)) if self.max_value_of_cast(b).is_some_and(|b| b >= a) => {
+                self.insert_bool(false)
+            }
+            (BinOp::Le, Right(a), Left(b)) if self.max_value_of_cast(a).is_some_and(|a| a <= b) => {
+                self.insert_bool(true)
+            }
+            (BinOp::Le, Left(a), Right(b)) if self.max_value_of_cast(b).is_some_and(|b| a > b) => {
+                self.insert_bool(false)
+            }
+            (BinOp::Gt, Left(a), Right(b)) if self.max_value_of_cast(b).is_some_and(|b| a > b) => {
+                self.insert_bool(true)
+            }
+            (BinOp::Gt, Right(a), Left(b)) if self.max_value_of_cast(a).is_some_and(|a| a <= b) => {
+                self.insert_bool(false)
+            }
+            (BinOp::Ge, Left(a), Right(b)) if self.max_value_of_cast(b).is_some_and(|b| a >= b) => {
+                self.insert_bool(true)
+            }
+            (BinOp::Ge, Right(a), Left(b)) if self.max_value_of_cast(a).is_some_and(|a| a < b) => {
+                self.insert_bool(false)
+            }
             _ => return None,
         };
 
@@ -1492,6 +1519,22 @@ impl<'body, 'a, 'tcx> VnState<'body, 'a, 'tcx> {
         } else {
             Some(result)
         }
+    }
+
+    fn max_value_of_cast(&self, value: VnIndex) -> Option<u128> {
+        let Value::Cast { kind: CastKind::IntToInt, value } = self.get(value) else {
+            return None;
+        };
+        let max_value = match self.ty(value).kind() {
+            ty::Uint(ty::UintTy::U8) => u8::MAX as u128,
+            ty::Uint(ty::UintTy::U16) => u16::MAX as u128,
+            ty::Uint(ty::UintTy::U32) => u32::MAX as u128,
+            ty::Uint(ty::UintTy::U64) => u64::MAX as u128,
+            ty::Uint(ty::UintTy::Usize) => usize::MAX as u128,
+            // u128::MAX intentionally omitted
+            _ => return None,
+        };
+        Some(max_value)
     }
 
     fn simplify_cast(
