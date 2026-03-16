@@ -1,65 +1,87 @@
 #![allow(incomplete_features)]
 #![feature(splat)]
-use std::splat::splat;
 
-#[splat]
-fn tuple_args((a, b): (u32, i8)) {}
+fn tuple_args(#[splat] (a, b): (u32, i8)) {}
 
-#[splat]
-trait FooTrait {
+#[splat] //~ ERROR `#[splat]` attribute cannot be used on functions
+fn tuple_args_bad((a, b): (u32, i8)) {}
+
+#[splat] //~ ERROR `#[splat]` attribute cannot be used on traits
+trait FooTraitBad {
     fn tuple_1(_: (u32,));
 
     fn tuple_4(self, _: (u32, i8, (), f32));
 }
 
-struct GoodFoo;
+trait FooTrait {
+    fn tuple_1(#[splat] _: (u32,));
 
-#[splat]
-impl GoodFoo {
-    fn tuple_1((a,): (u32,)) {}
+    fn tuple_4(#[splat] self, _: (u32, i8, (), f32));
+}
 
-    fn tuple_4(self, (a, b, c, d): (u32, i8, (), f32)) -> u32 {
+struct Foo;
+
+#[splat] //~ ERROR `#[splat]` attribute cannot be used on inherent impl blocks
+impl Foo {
+    fn tuple_1_bad((a,): (u32,)) {}
+
+    fn tuple_4_bad(self, (a, b, c, d): (u32, i8, (), f32)) -> u32 {
         a
     }
 }
 
-impl GoodFoo {
-    #[splat]
-    fn tuple_3((a, b, c): (u32, i32, i8)) {}
+impl Foo {
+    #[splat] //~ ERROR `#[splat]` attribute cannot be used on inherent methods
+    fn tuple_3_bad((a, b, c): (u32, i32, i8)) {}
 
-    #[splat]
-    fn tuple_2(self, (a, b): (u32, i8)) -> u32 {
+    #[splat] //~ ERROR `#[splat]` attribute cannot be used on inherent methods
+    fn tuple_2_bad(self, (a, b): (u32, i8)) -> u32 {
+        a
+    }
+
+    fn tuple_1(#[splat] (a,): (u32,)) {}
+
+    fn tuple_2_self(#[splat] self, (a, b): (u32, i8)) -> u32 {
+        a
+    }
+
+    fn tuple_3(#[splat] (a, b, c): (u32, i32, i8)) {}
+
+    fn tuple_2(self, #[splat] (a, b): (u32, i8)) -> u32 {
+        a
+    }
+
+    fn tuple_4(self, #[splat] (a, b, c, d): (u32, i8, (), f32)) -> u32 {
         a
     }
 }
 
-#[splat]
+impl FooTrait for Foo {
+    // FIXME(splat): should different splat attributes be allowed on traits and impls?
+    fn tuple_1(_: (u32,)) {}
+
+    fn tuple_4(#[splat] self, _: (u32, i8, (), f32)) {}
+}
+
+#[splat] //~ ERROR `#[splat]` attribute cannot be used on foreign modules
 extern "C" {
     fn foo_2(_: (u32, i8));
 }
 
-// FIXME(splat): this might not be possible if we need the extern "C" for the trampoline
 extern "C" {
-    #[splat]
-    fn bar_2(_: (u32, i8));
+    fn bar_2(#[splat] _: (u32, i8));
+
+    #[splat] //~ ERROR `#[splat]` attribute cannot be used on foreign functions
+    fn bar_2_bad(_: (u32, i8));
 }
 
-#[splat]
-mod foo_mod {} //~ ERROR `#[splat]` attribute is only allowed on functions
+#[splat] //~ ERROR `#[splat]` attribute cannot be used on modules
+mod foo_mod {}
 
-#[splat]
-extern crate foo_crate; //~ ERROR `#[splat]` attribute is only allowed on functions
+#[splat] //~ ERROR `#[splat]` attribute cannot be used on use statements
+use std::mem;
 
-#[splat]
-use std::mem; //~ ERROR `#[splat]` attribute is only allowed on functions
-
-#[splat]
-type FooTy = u32; //~ ERROR `#[splat]` attribute is only allowed on functions
-
-#[splat]
-struct FooStruct; //~ ERROR `#[splat]` attribute is only allowed on functions
-
-#[splat]
-const FOO: () = (); //~ ERROR `#[splat]` attribute is only allowed on functions
+#[splat] //~ ERROR `#[splat]` attribute cannot be used on structs
+struct FooStruct;
 
 fn main() {}

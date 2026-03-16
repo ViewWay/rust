@@ -1,38 +1,82 @@
-error: `#[splat]` attribute is only allowed on functions
-  --> $DIR/splat-non-function.rs:48:1
+error: `#[splat]` attribute cannot be used on functions
+  --> $DIR/splat-non-function.rs:6:1
    |
-LL | mod foo_mod {}
-   | ^^^^^^^^^^^^^^
-
-error: `#[splat]` attribute is only allowed on functions
-  --> $DIR/splat-non-function.rs:51:1
+LL | #[splat]
+   | ^^^^^^^^
    |
-LL | extern crate foo_crate;
-   | ^^^^^^^^^^^^^^^^^^^^^^^
+   = help: `#[splat]` can only be applied to function params
 
-error: `#[splat]` attribute is only allowed on functions
-  --> $DIR/splat-non-function.rs:54:1
+error: `#[splat]` attribute cannot be used on traits
+  --> $DIR/splat-non-function.rs:9:1
    |
-LL | use std::mem;
-   | ^^^^^^^^^^^^^
-
-error: `#[splat]` attribute is only allowed on functions
-  --> $DIR/splat-non-function.rs:57:1
+LL | #[splat]
+   | ^^^^^^^^
    |
-LL | type FooTy = u32;
-   | ^^^^^^^^^^^^^^^^^
+   = help: `#[splat]` can only be applied to function params
 
-error: `#[splat]` attribute is only allowed on functions
-  --> $DIR/splat-non-function.rs:60:1
+error: `#[splat]` attribute cannot be used on inherent impl blocks
+  --> $DIR/splat-non-function.rs:24:1
    |
-LL | struct FooStruct;
-   | ^^^^^^^^^^^^^^^^^
-
-error: `#[splat]` attribute is only allowed on functions
-  --> $DIR/splat-non-function.rs:63:1
+LL | #[splat]
+   | ^^^^^^^^
    |
-LL | const FOO: () = ();
-   | ^^^^^^^^^^^^^^^^^^^
+   = help: `#[splat]` can only be applied to function params
 
-error: aborting due to 6 previous errors
+error: `#[splat]` attribute cannot be used on inherent methods
+  --> $DIR/splat-non-function.rs:34:5
+   |
+LL |     #[splat]
+   |     ^^^^^^^^
+   |
+   = help: `#[splat]` can only be applied to function params
+
+error: `#[splat]` attribute cannot be used on inherent methods
+  --> $DIR/splat-non-function.rs:37:5
+   |
+LL |     #[splat]
+   |     ^^^^^^^^
+   |
+   = help: `#[splat]` can only be applied to function params
+
+error: `#[splat]` attribute cannot be used on foreign modules
+  --> $DIR/splat-non-function.rs:66:1
+   |
+LL | #[splat]
+   | ^^^^^^^^
+   |
+   = help: `#[splat]` can only be applied to function params
+
+error: `#[splat]` attribute cannot be used on foreign functions
+  --> $DIR/splat-non-function.rs:74:5
+   |
+LL |     #[splat]
+   |     ^^^^^^^^
+   |
+   = help: `#[splat]` can only be applied to function params
+
+error: `#[splat]` attribute cannot be used on modules
+  --> $DIR/splat-non-function.rs:78:1
+   |
+LL | #[splat]
+   | ^^^^^^^^
+   |
+   = help: `#[splat]` can only be applied to function params
+
+error: `#[splat]` attribute cannot be used on use statements
+  --> $DIR/splat-non-function.rs:81:1
+   |
+LL | #[splat]
+   | ^^^^^^^^
+   |
+   = help: `#[splat]` can only be applied to function params
+
+error: `#[splat]` attribute cannot be used on structs
+  --> $DIR/splat-non-function.rs:84:1
+   |
+LL | #[splat]
+   | ^^^^^^^^
+   |
+   = help: `#[splat]` can only be applied to function params
+
+error: aborting due to 10 previous errors
 

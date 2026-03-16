@@ -230,21 +230,6 @@ pub mod contracts;
 #[stable(feature = "cfg_select", since = "1.95.0")]
 pub use crate::macros::cfg_select;
 
-#[unstable(
-    feature = "splat",
-    issue = "153629",
-    reason = "`splat` is incomplete and is subject to change"
-)]
-/// Unstable module containing the unstable `splat` function macro.
-pub mod splat {
-    #[unstable(
-        feature = "splat",
-        issue = "153629",
-        reason = "`splat` is incomplete and is subject to change"
-    )]
-    pub use crate::macros::builtin::splat;
-}
-
 #[macro_use]
 mod internal_macros;
 
