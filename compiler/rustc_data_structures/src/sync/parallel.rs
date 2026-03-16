@@ -144,7 +144,7 @@ fn par_slice<I: DynSend>(
 
         const MAX_GROUP_COUNT: usize = 128;
         let group_size = items.len().div_ceil(MAX_GROUP_COUNT);
-        let mut groups = items.chunks_mut(group_size);
+        let groups = items.chunks_mut(group_size);
 
         // Reverse the order of the later functions since Rayon executes them in reverse
         // order when using a single thread. This ensures the execution order matches
