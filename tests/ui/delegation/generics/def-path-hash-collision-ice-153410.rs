@@ -22,10 +22,7 @@ impl Iterator {
     reuse< < <for<'a> fn()>::Output>::Item as Iterator>::*;
     //~^ ERROR: expected method or associated constant, found associated type `Iterator::Item`
     //~| ERROR: ambiguous associated type
+    //~| ERROR: method takes at most 1 generic argument but 2 generic arguments were supplied
 }
 
 fn main() {}
-
-// FIXME(fn_delegation): don't propagate synthetic generic params.
-//~? ERROR: method takes at most 1 generic argument but 2 generic arguments were supplied
-//~? ERROR: method takes at most 1 generic argument but 2 generic arguments were supplied

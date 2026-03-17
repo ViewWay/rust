@@ -35,24 +35,17 @@ LL +     reuse< < <fn() as IntoFuture>::Output>::Item as Iterator>::*;
    |
 
 error[E0107]: method takes at most 1 generic argument but 2 generic arguments were supplied
-  --> $SRC_DIR/core/src/iter/traits/iterator.rs:LL:COL
+  --> $DIR/def-path-hash-collision-ice-153410.rs:22:5
    |
-   = note: expected at most 1 generic argument
-   |
-   = note: help: remove the unnecessary generic argument
-   |
-   = note: `impl Trait` cannot be explicitly specified as a generic argument
-
-error[E0107]: method takes at most 1 generic argument but 2 generic arguments were supplied
-  --> $SRC_DIR/core/src/iter/traits/iterator.rs:LL:COL
-   |
-   = note: expected at most 1 generic argument
-   |
-   = note: help: remove the unnecessary generic argument
+LL |     reuse< < <for<'a> fn()>::Output>::Item as Iterator>::*;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+   |     |
+   |     expected at most 1 generic argument
+   |     help: remove the unnecessary generic argument
    |
    = note: `impl Trait` cannot be explicitly specified as a generic argument
 
-error: aborting due to 5 previous errors
+error: aborting due to 4 previous errors
 
 Some errors have detailed explanations: E0107, E0223, E0575, E0782.
 For more information about an error, try `rustc --explain E0107`.
