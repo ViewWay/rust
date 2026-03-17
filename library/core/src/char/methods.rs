@@ -890,6 +890,7 @@ impl char {
     }
 
     /// Returns `true` if this `char` has the general category for titlecase letters.
+    /// Conceptually, these characters consist of an uppercase portion followed by a lowercase portion.
     ///
     /// Titlecase letters (code points with the general category of `Lt`) are described in Chapter 4
     /// (Character Properties) of the [Unicode Standard] and specified in the [Unicode Character
@@ -906,7 +907,7 @@ impl char {
     /// ```
     /// #![feature(titlecase)]
     /// assert!('ǅ'.is_titlecase());
-    /// assert!('ᾨ'.is_titlecase());
+    /// assert!('ῼ'.is_titlecase());
     /// assert!(!'D'.is_titlecase());
     /// assert!(!'z'.is_titlecase());
     /// assert!(!'中'.is_titlecase());
@@ -1207,6 +1208,10 @@ impl char {
     /// Returns an iterator that yields the titlecase mapping of this `char` as one or more
     /// `char`s.
     ///
+    /// This is usually, but not always, equivalent to the uppercase mapping
+    /// returned by [`Self::to_uppercase`]. Prefer this method when seeking to capitalize
+    /// Only The First Letter of a word, but use [`Self::to_uppercase`] for ALL CAPS.
+    ///
     /// If this `char` does not have an titlecase mapping, the iterator yields the same `char`.
     ///
     /// If this `char` has a one-to-one titlecase mapping given by the [Unicode Character
@@ -1258,6 +1263,8 @@ impl char {
     /// ```
     /// #![feature(titlecase)]
     /// assert_eq!('c'.to_titlecase().to_string(), "C");
+    /// assert_eq!('ǆ'.to_titlecase().to_string(), "ǅ");
+    /// assert_eq!('ῼ'.to_titlecase().to_string(), "ῼ");
     ///
     /// // Sometimes the result is more than one character:
     /// assert_eq!('ß'.to_titlecase().to_string(), "Ss");
@@ -1303,6 +1310,9 @@ impl char {
 
     /// Returns an iterator that yields the uppercase mapping of this `char` as one or more
     /// `char`s.
+    ///
+    /// Prefer this method when converting a word into ALL CAPS, but consider [`Self::to_titlecase`]
+    /// instead if you seek to capitalize Only The First Letter.
     ///
     /// If this `char` does not have an uppercase mapping, the iterator yields the same `char`.
     ///
@@ -1353,9 +1363,11 @@ impl char {
     ///
     /// ```
     /// assert_eq!('c'.to_uppercase().to_string(), "C");
+    /// assert_eq!('ǆ'.to_uppercase().to_string(), "Ǆ");
     ///
     /// // Sometimes the result is more than one character:
     /// assert_eq!('ﬅ'.to_uppercase().to_string(), "ST");
+    /// assert_eq!('ῼ'.to_uppercase().to_string(), "ΩΙ");
     ///
     /// // Characters that do not have both uppercase and lowercase
     /// // convert into themselves.
