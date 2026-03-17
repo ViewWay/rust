@@ -55,13 +55,12 @@ pub(crate) struct QueryJobInfo<'tcx> {
 
 pub(crate) fn find_cycle_in_stack<'tcx>(
     id: QueryJobId,
-    job_map: QueryJobMap<'tcx>,
-    current_job: &Option<QueryJobId>,
+    job_map: &QueryJobMap<'tcx>,
+    mut current_job: Option<QueryJobId>,
     span: Span,
-) -> CycleError<'tcx> {
+) -> Option<CycleError<'tcx>> {
     // Find the waitee amongst `current_job` parents
     let mut cycle = Vec::new();
-    let mut current_job = Option::clone(current_job);
 
     while let Some(job) = current_job {
         let info = &job_map.map[&job];
@@ -80,13 +79,13 @@ pub(crate) fn find_cycle_in_stack<'tcx>(
                 let parent = info.job.parent?;
                 respan(info.job.span, job_map.frame_of(parent).clone())
             };
-            return CycleError { usage, cycle };
+            return Some(CycleError { usage, cycle });
         }
 
         current_job = info.job.parent;
     }
 
-    panic!("did not find a cycle")
+    None
 }
 
 /// Finds the query job closest to the root that is for the same query method as `id`
@@ -318,6 +317,8 @@ fn remove_cycle<'tcx>(
             .query_waiting_on_cycle
             .map(|(span, job)| respan(span, job_map.frame_of(job).clone()));
 
+        let span = entry_point.query_waiting_on_cycle.map_or(DUMMY_SP, |(s, _)| s);
+        stack[0].0 = span;
         // Create the cycle error
         let error = CycleError {
             usage,
@@ -327,6 +328,20 @@ fn remove_cycle<'tcx>(
                 .collect(),
         };
 
+        if cfg!(debug_assertions)
+            && let Some(expected) = find_cycle_in_stack(
+                entry_point.query_in_cycle,
+                job_map,
+                stack.last().map(|&(_, job)| job),
+                span,
+            )
+        {
+            if error != expected {
+                panic!(
+                    "CycleError coherency check failed:\nexpected: {expected:#?}\ngot: {error:#?}"
+                );
+            }
+        }
         // We unwrap `resumable` here since there must always be one
         // edge which is resumable / waited using a query latch
         let (waitee_query, waiter_idx) = resumable.unwrap();

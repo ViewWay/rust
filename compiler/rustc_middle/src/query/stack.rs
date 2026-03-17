@@ -3,7 +3,7 @@ use crate::queries::TaggedQueryKey;
 /// Description of a frame in the query stack.
 ///
 /// This is mostly used in case of cycles for error reporting.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct QueryStackFrame<'tcx> {
     /// The query and key of the query method call that this stack frame
     /// corresponds to.
