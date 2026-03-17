@@ -588,6 +588,9 @@ mod uefi_fs {
         path: crate::path::PathBuf,
     }
 
+    // SAFETY: UEFI has no threads
+    unsafe impl Send for File {}
+
     impl File {
         pub(crate) fn from_path(path: &Path, open_mode: u64, attr: u64) -> io::Result<Self> {
             let absolute = crate::path::absolute(path)?;
