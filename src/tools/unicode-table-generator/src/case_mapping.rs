@@ -381,7 +381,8 @@ fn lookup(input: char, l1_lut: &L1Lut) -> Option<[char; 3]> {
 }
 
 pub fn to_lower(c: char) -> [char; 3] {
-    if c.is_ascii() {
+    // https://util.unicode.org/UnicodeJsps/list-unicodeset.jsp?a=%5B%253AChanges_When_Lowercased%253A%5D-%5B%253AASCII%253A%5D&abb=on
+    if c < '\u{C0}' {
         return [c.to_ascii_lowercase(), '\0', '\0'];
     }
 
@@ -389,7 +390,8 @@ pub fn to_lower(c: char) -> [char; 3] {
 }
 
 pub fn to_upper(c: char) -> [char; 3] {
-    if c.is_ascii() {
+    // https://util.unicode.org/UnicodeJsps/list-unicodeset.jsp?a=%5B%253AChanges_When_Uppercased%253A%5D-%5B%253AASCII%253A%5D&abb=on
+    if c < '\u{B5}' {
         return [c.to_ascii_uppercase(), '\0', '\0'];
     }
 
@@ -397,7 +399,8 @@ pub fn to_upper(c: char) -> [char; 3] {
 }
 
 pub fn to_title(c: char) -> [char; 3] {
-    if c.is_ascii() {
+    // https://util.unicode.org/UnicodeJsps/list-unicodeset.jsp?a=%5B%253AChanges_When_Titlecased%253A%5D-%5B%253AASCII%253A%5D&abb=on
+    if c < '\u{B5}' {
         return [c.to_ascii_uppercase(), '\0', '\0'];
     }
 
