@@ -22,7 +22,7 @@ pub(crate) fn collect_definitions(
 ) {
     let invocation_parent = resolver.invocation_parents[&expansion];
     debug!("new fragment to visit with invocation_parent: {invocation_parent:?}");
-    let mut visitor = DefCollector { resolver, expansion, invocation_parent, is_delegation: false };
+    let mut visitor = DefCollector { resolver, expansion, invocation_parent };
     fragment.visit_with(&mut visitor);
 }
 
@@ -31,7 +31,6 @@ struct DefCollector<'a, 'ra, 'tcx> {
     resolver: &'a mut Resolver<'ra, 'tcx>,
     invocation_parent: InvocationParent,
     expansion: LocalExpnId,
-    is_delegation: bool,
 }
 
 pub(super) struct ParentContext {
@@ -59,7 +58,7 @@ impl<'a, 'ra, 'tcx> DefCollector<'a, 'ra, 'tcx> {
             node_id, def_kind, parent
         );
 
-        let ctx = ParentContext { parent, is_delegation: self.is_delegation };
+        let ctx = ParentContext { parent, is_delegation: self.invocation_parent.is_delegation };
 
         self.resolver
             .create_def(
@@ -77,11 +76,12 @@ impl<'a, 'ra, 'tcx> DefCollector<'a, 'ra, 'tcx> {
         let parent_ctx = parent_ctx.into();
         let orig_parent_def =
             mem::replace(&mut self.invocation_parent.parent_def, parent_ctx.parent);
-        let orig_is_delegation = mem::replace(&mut self.is_delegation, parent_ctx.is_delegation);
+        let orig_is_delegation =
+            mem::replace(&mut self.invocation_parent.is_delegation, parent_ctx.is_delegation);
 
         f(self);
 
-        self.is_delegation = orig_is_delegation;
+        self.invocation_parent.is_delegation = orig_is_delegation;
         self.invocation_parent.parent_def = orig_parent_def;
     }
 

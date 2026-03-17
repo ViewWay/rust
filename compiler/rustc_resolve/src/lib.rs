@@ -188,6 +188,7 @@ struct InvocationParent {
     impl_trait_context: ImplTraitContext,
     in_attr: bool,
     const_arg_context: ConstArgContext,
+    is_delegation: bool,
 }
 
 impl InvocationParent {
@@ -196,6 +197,7 @@ impl InvocationParent {
         impl_trait_context: ImplTraitContext::Existential,
         in_attr: false,
         const_arg_context: ConstArgContext::NonDirect,
+        is_delegation: false,
     };
 }
 
