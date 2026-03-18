@@ -6,7 +6,7 @@
 
 use my_api::root_function;
 use my_api::utils::util;
-//~^ ERROR E0432
+//~^ ERROR unresolved import `my_api::utils`
 
 fn main() {
     let _ = root_function();

@@ -1,4 +1,4 @@
-// Tests that namespaced crate names are limited to two segments
+// Tests that std has higher precedence than an open module with the same name.
 
 //@ aux-crate: std::utils=open-ns-my_api_utils.rs
 //@ compile-flags: -Z namespaced-crates

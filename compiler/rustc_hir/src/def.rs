@@ -590,7 +590,7 @@ pub enum Res<Id = hir::HirId> {
     /// **Belongs to the type namespace.**
     ToolMod,
 
-    /// The resolution for a virtual module in a namespaced crate. E.g. `my_api`
+    /// The resolution for an open module in a namespaced crate. E.g. `my_api`
     /// in the namespaced crate `my_api::utils` when `my_api` isn't part of the
     /// extern prelude.
     ///

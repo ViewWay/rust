@@ -1,4 +1,4 @@
-// Tests that virtual modules are resolvable.
+// Tests that open modules are resolvable.
 
 //@ aux-crate: my_api::utils=open-ns-my_api_utils.rs
 //@ compile-flags: -Z namespaced-crates

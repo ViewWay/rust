@@ -1737,7 +1737,7 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
                     format!("{} {}", kinds.article(), kinds.descr())
                 }
                 Res::ToolMod | Res::OpenMod(..) => {
-                    // Don't confuse the user with tool modules or virtual modules.
+                    // Don't confuse the user with tool modules or open modules.
                     continue;
                 }
                 Res::Def(DefKind::Trait, _) if macro_kind == MacroKind::Derive => {
@@ -1968,7 +1968,6 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
         true
     }
 
-    #[instrument(skip(self), level = "debug")]
     fn decl_description(&self, b: Decl<'_>, ident: Ident, scope: Scope<'_>) -> String {
         let res = b.res();
         if b.span.is_dummy() || !self.tcx.sess.source_map().is_span_accessible(b.span) {

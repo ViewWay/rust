@@ -479,7 +479,6 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
                     }
                     Err(determinacy) => Err(determinacy.into_value()),
                 };
-
                 match res {
                     Ok(decl) if sub_namespace_match(decl.macro_kinds(), macro_kind) => {
                         // Below we report various ambiguity errors.

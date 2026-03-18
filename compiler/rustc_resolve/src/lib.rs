@@ -77,7 +77,7 @@ use rustc_session::lint::builtin::PRIVATE_MACRO_USE;
 use rustc_span::hygiene::{ExpnId, LocalExpnId, MacroKind, SyntaxContext, Transparency};
 use rustc_span::{DUMMY_SP, Ident, Span, Symbol, kw, sym};
 use smallvec::{SmallVec, smallvec};
-use tracing::{debug, instrument};
+use tracing::debug;
 
 type Res = def::Res<NodeId>;
 
@@ -1125,7 +1125,7 @@ struct ExternPreludeEntry<'ra> {
         CacheCell<(
             PendingDecl<'ra>,
             /* finalized */ bool,
-            /* virtual flag (namespaced crate) */ bool,
+            /* open flag (namespaced crate) */ bool,
         )>,
     >,
 }
@@ -1142,7 +1142,7 @@ impl ExternPreludeEntry<'_> {
         }
     }
 
-    fn virtual_flag() -> Self {
+    fn open_flag() -> Self {
         ExternPreludeEntry {
             item_decl: None,
             flag_decl: Some(CacheCell::new((PendingDecl::Pending, false, true))),
@@ -2304,7 +2304,6 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
         })
     }
 
-    #[instrument(skip(self), level = "debug")]
     fn extern_prelude_get_flag(
         &self,
         ident: IdentKey,
@@ -2313,11 +2312,10 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
     ) -> Option<Decl<'ra>> {
         let entry = self.extern_prelude.get(&ident);
         entry.and_then(|entry| entry.flag_decl.as_ref()).and_then(|flag_decl| {
-            let (pending_decl, finalized, is_virtual) = flag_decl.get();
-            debug!(?pending_decl, ?is_virtual);
+            let (pending_decl, finalized, is_open) = flag_decl.get();
             let decl = match pending_decl {
                 PendingDecl::Ready(decl) => {
-                    if finalize && !finalized && !is_virtual {
+                    if finalize && !finalized && !is_open {
                         self.cstore_mut().process_path_extern(
                             self.tcx,
                             ident.name,
@@ -2328,7 +2326,7 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
                 }
                 PendingDecl::Pending => {
                     debug_assert!(!finalized);
-                    if is_virtual {
+                    if is_open {
                         let res = Res::OpenMod(ident.name);
                         Some(self.arenas.new_pub_def_decl(res, DUMMY_SP, LocalExpnId::ROOT))
                     } else {
@@ -2349,7 +2347,7 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
                     }
                 }
             };
-            flag_decl.set((PendingDecl::Ready(decl), finalize || finalized, is_virtual));
+            flag_decl.set((PendingDecl::Ready(decl), finalize || finalized, is_open));
             decl.or_else(|| finalize.then_some(self.dummy_decl))
         })
     }
@@ -2535,12 +2533,12 @@ fn build_extern_prelude<'tcx, 'ra>(
         })
         .collect();
 
-    // Add virtual base entries for namespaced crates whose base segment
+    // Add open base entries for namespaced crates whose base segment
     // is missing from the prelude (e.g. `foo::bar` without `foo`).
     // These are necessary in order to resolve the open modules, whereas
     // the namespaced names are necessary in `extern_prelude` for actually
     // resolving the namespaced crates.
-    let missing_virtual_bases: Vec<IdentKey> = extern_prelude
+    let missing_open_bases: Vec<IdentKey> = extern_prelude
         .keys()
         .filter_map(|ident| {
             let (base, _) = ident.name.as_str().split_once("::")?;
@@ -2551,10 +2549,8 @@ fn build_extern_prelude<'tcx, 'ra>(
         .collect();
 
     extern_prelude.extend(
-        missing_virtual_bases.into_iter().map(|ident| (ident, ExternPreludeEntry::virtual_flag())),
+        missing_open_bases.into_iter().map(|ident| (ident, ExternPreludeEntry::open_flag())),
     );
-
-    debug!(?extern_prelude);
 
     // Inject `core` / `std` unless suppressed by attributes.
     if !attr::contains_name(attrs, sym::no_core) {
