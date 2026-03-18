@@ -833,6 +833,10 @@ impl f16 {
     #[must_use = "method returns a new number and does not mutate the original value"]
     pub fn asinh(self) -> f16 {
         let ax = self.abs();
+        if ax >= (1u16 << f16::MANTISSA_DIGITS / 2) as f16 {
+            return (ax.ln() + consts::LN_2).copysign(self);
+        }
+
         let ix = 1.0 / ax;
         (ax + (ax / (Self::hypot(1.0, ix) + ix))).ln_1p().copysign(self)
     }
@@ -867,6 +871,8 @@ impl f16 {
     pub fn acosh(self) -> f16 {
         if self < 1.0 {
             Self::NAN
+        } else if self >= (1u16 << f16::MANTISSA_DIGITS / 2) as f16 {
+            self.ln() + consts::LN_2
         } else {
             (self + ((self - 1.0).sqrt() * (self + 1.0).sqrt())).ln()
         }
