@@ -1,3 +1,7 @@
+//! Regression test for https://github.com/rust-lang/rust/issues/29821
+//!
+//! Tests that `static mut` items with fields whose type is an
+//! associated type projection compile successfully.
 //@ build-pass
 
 pub trait Foo {
@@ -5,7 +9,7 @@ pub trait Foo {
 }
 
 pub struct Bar<F: Foo> {
-    id: F::FooAssoc
+    id: F::FooAssoc,
 }
 
 pub struct Baz;
