@@ -91,6 +91,7 @@ pub mod rustdoc;
 
 pub use macros::registered_tools_ast;
 
+use crate::def_collector::ParentContext;
 use crate::ref_mut::{CmCell, CmRefCell};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -187,6 +188,7 @@ struct InvocationParent {
     impl_trait_context: ImplTraitContext,
     in_attr: bool,
     const_arg_context: ConstArgContext,
+    is_delegation: bool,
 }
 
 impl InvocationParent {
@@ -195,6 +197,7 @@ impl InvocationParent {
         impl_trait_context: ImplTraitContext::Existential,
         in_attr: false,
         const_arg_context: ConstArgContext::NonDirect,
+        is_delegation: false,
     };
 }
 
@@ -1337,7 +1340,7 @@ pub struct Resolver<'ra, 'tcx> {
     /// Generic args to suggest for required params (e.g. `<'_>`, `<_, _>`), if any.
     item_required_generic_args_suggestions: FxHashMap<LocalDefId, String> = default::fx_hash_map(),
     delegation_fn_sigs: LocalDefIdMap<DelegationFnSig> = Default::default(),
-    delegation_infos: LocalDefIdMap<DelegationInfo> = Default::default(),
+    delegation_infos: LocalDefIdMap<(DelegationInfo, DisambiguatorState)> = Default::default(),
 
     main_def: Option<MainDefinition> = None,
     trait_impls: FxIndexMap<DefId, Vec<LocalDefId>>,
@@ -1505,7 +1508,7 @@ impl<'tcx> Resolver<'_, 'tcx> {
     /// Adds a definition with a parent definition.
     fn create_def(
         &mut self,
-        parent: LocalDefId,
+        parent_ctx: ParentContext,
         node_id: ast::NodeId,
         name: Option<Symbol>,
         def_kind: DefKind,
@@ -1520,6 +1523,13 @@ impl<'tcx> Resolver<'_, 'tcx> {
             def_kind,
             self.tcx.definitions_untracked().def_key(self.node_id_to_def_id[&node_id].key()),
         );
+
+        let ParentContext { parent, is_delegation } = parent_ctx;
+
+        if is_delegation {
+            let data = def_kind.def_path_data(name);
+            self.delegation_infos.entry(parent).or_default().1.next(parent, data);
+        }
 
         // FIXME: remove `def_span` body, pass in the right spans here and call `tcx.at().create_def()`
         let feed = self.tcx.create_def(parent, name, def_kind, None, &mut self.disambiguator);
@@ -1857,7 +1867,11 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
             lifetime_elision_allowed: self.lifetime_elision_allowed,
             lint_buffer: Steal::new(self.lint_buffer),
             delegation_fn_sigs: self.delegation_fn_sigs,
-            delegation_infos: self.delegation_infos,
+            delegation_infos: self
+                .delegation_infos
+                .into_items()
+                .map(|(key, (i, d))| (key, (i, Steal::new(d))))
+                .collect(),
         };
         ResolverOutputs { global_ctxt, ast_lowering }
     }

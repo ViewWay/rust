@@ -439,7 +439,7 @@ impl<'hir, R: ResolverAstLoweringExt<'hir>> LoweringContext<'_, 'hir, R> {
                                 res,
                             }]),
                             res,
-                            span: p.span,
+                            span,
                         }),
                     )
                 };
@@ -460,7 +460,7 @@ impl<'hir, R: ResolverAstLoweringExt<'hir>> LoweringContext<'_, 'hir, R> {
                     hir::GenericParamKind::Type { .. } => {
                         Some(hir::GenericArg::Type(self.arena.alloc(hir::Ty {
                             hir_id: self.next_id(),
-                            span: p.span,
+                            span,
                             kind: hir::TyKind::Path(create_path(self)),
                         })))
                     }
@@ -468,7 +468,7 @@ impl<'hir, R: ResolverAstLoweringExt<'hir>> LoweringContext<'_, 'hir, R> {
                         Some(hir::GenericArg::Const(self.arena.alloc(hir::ConstArg {
                             hir_id: self.next_id(),
                             kind: hir::ConstArgKind::Path(create_path(self)),
-                            span: p.span,
+                            span,
                         })))
                     }
                 }
@@ -531,7 +531,7 @@ impl<'hir, R: ResolverAstLoweringExt<'hir>> LoweringContext<'_, 'hir, R> {
                 })
                 .collect(),
             where_clause: Default::default(),
-            span: DUMMY_SP,
+            span,
         })
     }
 
@@ -567,14 +567,14 @@ impl<'hir, R: ResolverAstLoweringExt<'hir>> LoweringContext<'_, 'hir, R> {
                             id: self.next_node_id(),
                             args: None
                         }],
-                        span: DUMMY_SP,
+                        span,
                         tokens: None,
                     },
                 ),
-                span: DUMMY_SP,
+                span,
                 tokens: None,
             }),
-            span: DUMMY_SP,
+            span,
             default: None,
         }
     }

@@ -31,7 +31,7 @@ use rustc_hir::{MissingLifetimeKind, PrimTy, TraitCandidate};
 use rustc_middle::middle::resolve_bound_vars::Set1;
 use rustc_middle::ty::{
     AssocTag, DELEGATION_INHERIT_ATTRS_START, DelegationAttrs, DelegationFnSig,
-    DelegationFnSigAttrs, DelegationInfo, Visibility,
+    DelegationFnSigAttrs, Visibility,
 };
 use rustc_middle::{bug, span_bug};
 use rustc_session::config::{CrateType, ResolveDocLinks};
@@ -3819,13 +3819,9 @@ impl<'a, 'ast, 'ra, 'tcx> LateResolutionVisitor<'a, 'ast, 'ra, 'tcx> {
 
         self.visit_path(&delegation.path);
 
-        self.r.delegation_infos.insert(
-            self.r.local_def_id(item_id),
-            DelegationInfo {
-                attrs: create_delegation_attrs(attrs),
-                resolution_node: if is_in_trait_impl { item_id } else { delegation.id },
-            },
-        );
+        let info = &mut self.r.delegation_infos.entry(self.r.local_def_id(item_id)).or_default().0;
+        info.attrs = create_delegation_attrs(attrs);
+        info.resolution_node = if is_in_trait_impl { item_id } else { delegation.id };
 
         let Some(body) = &delegation.body else { return };
         self.with_rib(ValueNS, RibKind::FnOrCoroutine, |this| {

@@ -33,6 +33,17 @@ struct DefCollector<'a, 'ra, 'tcx> {
     expansion: LocalExpnId,
 }
 
+pub(super) struct ParentContext {
+    pub parent: LocalDefId,
+    pub is_delegation: bool,
+}
+
+impl Into<ParentContext> for LocalDefId {
+    fn into(self) -> ParentContext {
+        ParentContext { parent: self, is_delegation: false }
+    }
+}
+
 impl<'a, 'ra, 'tcx> DefCollector<'a, 'ra, 'tcx> {
     fn create_def(
         &mut self,
@@ -41,14 +52,17 @@ impl<'a, 'ra, 'tcx> DefCollector<'a, 'ra, 'tcx> {
         def_kind: DefKind,
         span: Span,
     ) -> LocalDefId {
-        let parent_def = self.invocation_parent.parent_def;
+        let parent = self.invocation_parent.parent_def;
         debug!(
             "create_def(node_id={:?}, def_kind={:?}, parent_def={:?})",
-            node_id, def_kind, parent_def
+            node_id, def_kind, parent
         );
+
+        let ctx = ParentContext { parent, is_delegation: self.invocation_parent.is_delegation };
+
         self.resolver
             .create_def(
-                parent_def,
+                ctx,
                 node_id,
                 name,
                 def_kind,
@@ -58,9 +72,16 @@ impl<'a, 'ra, 'tcx> DefCollector<'a, 'ra, 'tcx> {
             .def_id()
     }
 
-    fn with_parent<F: FnOnce(&mut Self)>(&mut self, parent_def: LocalDefId, f: F) {
-        let orig_parent_def = mem::replace(&mut self.invocation_parent.parent_def, parent_def);
+    fn with_parent<F: FnOnce(&mut Self)>(&mut self, parent_ctx: impl Into<ParentContext>, f: F) {
+        let parent_ctx = parent_ctx.into();
+        let orig_parent_def =
+            mem::replace(&mut self.invocation_parent.parent_def, parent_ctx.parent);
+        let orig_is_delegation =
+            mem::replace(&mut self.invocation_parent.is_delegation, parent_ctx.is_delegation);
+
         f(self);
+
+        self.invocation_parent.is_delegation = orig_is_delegation;
         self.invocation_parent.parent_def = orig_parent_def;
     }
 
@@ -184,7 +205,10 @@ impl<'a, 'ra, 'tcx> visit::Visitor<'a> for DefCollector<'a, 'ra, 'tcx> {
             self.resolver.new_local_macro(def_id, macro_data);
         }
 
-        self.with_parent(def_id, |this| {
+        let is_delegation = matches!(i.kind, ItemKind::Delegation(_));
+        let ctx = ParentContext { parent: def_id, is_delegation };
+
+        self.with_parent(ctx, |this| {
             this.with_impl_trait(ImplTraitContext::Existential, |this| {
                 match i.kind {
                     ItemKind::Struct(_, _, ref struct_def)
@@ -367,7 +391,10 @@ impl<'a, 'ra, 'tcx> visit::Visitor<'a> for DefCollector<'a, 'ra, 'tcx> {
         };
 
         let def = self.create_def(i.id, Some(ident.name), def_kind, i.span);
-        self.with_parent(def, |this| visit::walk_assoc_item(this, i, ctxt));
+        let is_delegation = matches!(i.kind, AssocItemKind::Delegation(_));
+        let ctx = ParentContext { parent: def, is_delegation };
+
+        self.with_parent(ctx, |this| visit::walk_assoc_item(this, i, ctxt));
     }
 
     fn visit_pat(&mut self, pat: &'a Pat) {
