@@ -79,6 +79,7 @@ pub(crate) fn should_have_doc_example(cx: &DocContext<'_>, item: &clean::Item) -
                 | clean::ProvidedAssocConstItem(..)
                 | clean::ImplAssocConstItem(..)
                 | clean::RequiredAssocTypeItem(..)
+                | clean::PlaceholderImplItem
                 // check for trait impl
                 | clean::ImplItem(box clean::Impl { trait_: Some(_), .. })
         )
