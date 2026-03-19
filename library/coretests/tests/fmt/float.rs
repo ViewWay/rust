@@ -170,6 +170,14 @@ fn test_format_f32_rounds_ties_to_even() {
     assert_eq!("-1.28E2", format!("{:.2E}", -128.5f32));
 }
 
+#[test]
+fn test_format_f64_max_precision_exponential() {
+    let zeroes = "0".repeat(u16::MAX as usize);
+
+    assert_eq!(format!("{:.65535e}", 1.0f64), format!("1.{zeroes}e0"));
+    assert_eq!(format!("{:.65535E}", 1.0f64), format!("1.{zeroes}E0"));
+}
+
 fn is_exponential(s: &str) -> bool {
     s.contains("e") || s.contains("E")
 }

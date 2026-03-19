@@ -109,7 +109,7 @@ fn float_to_exponential_common_exact<T>(
     fmt: &mut Formatter<'_>,
     num: &T,
     sign: flt2dec::Sign,
-    precision: u16,
+    precision: usize,
     upper: bool,
 ) -> Result
 where
@@ -121,7 +121,7 @@ where
         flt2dec::strategy::grisu::format_exact,
         *num,
         sign,
-        precision.into(),
+        precision,
         upper,
         &mut buf,
         &mut parts,
@@ -172,7 +172,7 @@ where
 
     if let Some(precision) = fmt.options.get_precision() {
         // 1 integral digit + `precision` fractional digits = `precision + 1` total digits
-        float_to_exponential_common_exact(fmt, num, sign, precision + 1, upper)
+        float_to_exponential_common_exact(fmt, num, sign, usize::from(precision) + 1, upper)
     } else {
         float_to_exponential_common_shortest(fmt, num, sign, upper)
     }
