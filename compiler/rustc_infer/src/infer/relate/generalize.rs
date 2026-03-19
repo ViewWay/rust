@@ -212,29 +212,41 @@ impl<'tcx> InferCtxt<'tcx> {
             source_ct,
         )?;
 
-        debug_assert!(!generalized_ct.is_ct_infer());
+        if let ty::ConstKind::Infer(ty::InferConst::Var(generalized_vid)) = generalized_ct.kind() {
+            self.inner.borrow_mut().const_unification_table().union(target_vid, generalized_vid);
 
-        self.inner
-            .borrow_mut()
-            .const_unification_table()
-            .union_value(target_vid, ConstVariableValue::Known { value: generalized_ct });
-
-        // Make sure that the order is correct when relating the
-        // generalized const and the source.
-        if target_is_expected {
-            relation.relate_with_variance(
-                ty::Invariant,
-                ty::VarianceDiagInfo::default(),
-                generalized_ct,
-                source_ct,
-            )?;
+            if self.next_trait_solver() {
+                relation.register_predicates([ty::PredicateKind::AliasRelate(
+                    generalized_ct.into(),
+                    source_ct.into(),
+                    AliasRelationDirection::Equate,
+                )]);
+            } else {
+                return Err(TypeError::CyclicConst(source_ct));
+            }
         } else {
-            relation.relate_with_variance(
-                ty::Invariant,
-                ty::VarianceDiagInfo::default(),
-                source_ct,
-                generalized_ct,
-            )?;
+            self.inner
+                .borrow_mut()
+                .const_unification_table()
+                .union_value(target_vid, ConstVariableValue::Known { value: generalized_ct });
+
+            // Make sure that the order is correct when relating the
+            // generalized const and the source.
+            if target_is_expected {
+                relation.relate_with_variance(
+                    ty::Invariant,
+                    ty::VarianceDiagInfo::default(),
+                    generalized_ct,
+                    source_ct,
+                )?;
+            } else {
+                relation.relate_with_variance(
+                    ty::Invariant,
+                    ty::VarianceDiagInfo::default(),
+                    source_ct,
+                    generalized_ct,
+                )?;
+            }
         }
 
         Ok(())
@@ -377,8 +389,12 @@ impl<'tcx> Generalizer<'_, 'tcx> {
 
     /// Create a new type variable in the universe of the target when
     /// generalizing an alias.
-    fn next_ty_var_for_alias(&self) -> Ty<'tcx> {
-        self.infcx.next_ty_var_in_universe(self.span, self.for_universe)
+    fn next_var_for_alias_of_kind(&self, alias: ty::AliasTerm<'tcx>) -> ty::Term<'tcx> {
+        if alias.kind(self.cx()).is_type() {
+            self.infcx.next_ty_var_in_universe(self.span, self.for_universe).into()
+        } else {
+            self.infcx.next_const_var_in_universe(self.span, self.for_universe).into()
+        }
     }
 
     /// An occurs check failure inside of an alias does not mean
@@ -399,10 +415,10 @@ impl<'tcx> Generalizer<'_, 'tcx> {
     ///   continue generalizing the alias. This ends up pulling down the universe of the
     ///   inference variable and is incomplete in case the alias would normalize to a type
     ///   which does not mention that inference variable.
-    fn generalize_alias_ty(
+    fn generalize_alias_term(
         &mut self,
-        alias: ty::AliasTy<'tcx>,
-    ) -> Result<Ty<'tcx>, TypeError<'tcx>> {
+        alias: ty::AliasTerm<'tcx>,
+    ) -> Result<ty::Term<'tcx>, TypeError<'tcx>> {
         // We do not eagerly replace aliases with inference variables if they have
         // escaping bound vars, see the method comment for details. However, when we
         // are inside of an alias with escaping bound vars replacing nested aliases
@@ -410,12 +426,12 @@ impl<'tcx> Generalizer<'_, 'tcx> {
         //
         // cc trait-system-refactor-initiative#110
         if self.infcx.next_trait_solver() && !alias.has_escaping_bound_vars() && !self.in_alias {
-            return Ok(self.next_ty_var_for_alias());
+            return Ok(self.next_var_for_alias_of_kind(alias));
         }
 
         let is_nested_alias = mem::replace(&mut self.in_alias, true);
         let result = match self.relate(alias, alias) {
-            Ok(alias) => Ok(alias.to_ty(self.cx())),
+            Ok(alias) => Ok(alias.to_term(self.cx())),
             Err(e) => {
                 if is_nested_alias {
                     return Err(e);
@@ -430,7 +446,7 @@ impl<'tcx> Generalizer<'_, 'tcx> {
                     }
 
                     debug!("generalization failure in alias");
-                    Ok(self.next_ty_var_for_alias())
+                    Ok(self.next_var_for_alias_of_kind(alias))
                 }
             }
         };
@@ -507,13 +523,13 @@ impl<'tcx> TypeRelation<TyCtxt<'tcx>> for Generalizer<'_, 'tcx> {
                 if TermVid::Ty(vid) == self.root_vid {
                     // If sub-roots are equal, then `root_vid` and
                     // `vid` are related via subtyping.
-                    Err(self.cyclic_term_error())
+                    return Err(self.cyclic_term_error());
                 } else {
                     let probe = inner.type_variables().probe(vid);
                     match probe {
                         TypeVariableValue::Known { value: u } => {
                             drop(inner);
-                            self.relate(u, u)
+                            self.relate(u, u)?
                         }
                         TypeVariableValue::Unknown { universe } => {
                             match self.ambient_variance {
@@ -559,7 +575,7 @@ impl<'tcx> TypeRelation<TyCtxt<'tcx>> for Generalizer<'_, 'tcx> {
                             }
 
                             debug!("replacing original vid={:?} with new={:?}", vid, new_var_id);
-                            Ok(Ty::new_var(self.cx(), new_var_id))
+                            Ty::new_var(self.cx(), new_var_id)
                         }
                     }
                 }
@@ -569,28 +585,30 @@ impl<'tcx> TypeRelation<TyCtxt<'tcx>> for Generalizer<'_, 'tcx> {
                 // No matter what mode we are in,
                 // integer/floating-point types must be equal to be
                 // relatable.
-                Ok(t)
+                t
             }
 
             ty::Placeholder(placeholder) => {
                 if self.for_universe.can_name(placeholder.universe) {
-                    Ok(t)
+                    t
                 } else {
                     debug!(
                         "root universe {:?} cannot name placeholder in universe {:?}",
                         self.for_universe, placeholder.universe
                     );
-                    Err(TypeError::Mismatch)
+                    return Err(TypeError::Mismatch);
                 }
             }
 
             ty::Alias(_, data) => match self.structurally_relate_aliases {
-                StructurallyRelateAliases::No => self.generalize_alias_ty(data),
-                StructurallyRelateAliases::Yes => relate::structurally_relate_tys(self, t, t),
+                StructurallyRelateAliases::No => {
+                    self.generalize_alias_term(data.into())?.expect_type()
+                }
+                StructurallyRelateAliases::Yes => relate::structurally_relate_tys(self, t, t)?,
             },
 
-            _ => relate::structurally_relate_tys(self, t, t),
-        }?;
+            _ => relate::structurally_relate_tys(self, t, t)?,
+        };
 
         self.cache.insert((t, self.ambient_variance, self.in_alias), g);
         Ok(g)
@@ -695,17 +713,26 @@ impl<'tcx> TypeRelation<TyCtxt<'tcx>> for Generalizer<'_, 'tcx> {
             // FIXME: Unevaluated constants are also not rigid, so the current
             // approach of always relating them structurally is incomplete.
             //
-            // FIXME: remove this branch once `structurally_relate_consts` is fully
-            // structural.
-            ty::ConstKind::Unevaluated(ty::UnevaluatedConst { def, args }) => {
-                let args = self.relate_with_variance(
-                    ty::Invariant,
-                    ty::VarianceDiagInfo::default(),
-                    args,
-                    args,
-                )?;
-                Ok(ty::Const::new_unevaluated(self.cx(), ty::UnevaluatedConst { def, args }))
-            }
+            // FIXME: replace the StructurallyRelateAliases::Yes branch with
+            // `structurally_relate_consts` once it is fully structural.
+            ty::ConstKind::Unevaluated(uv) => match self.structurally_relate_aliases {
+                // Hack: Fall back to old behavior if GCE is enabled (it used to just be the Yes
+                // path), as doing this new No path breaks some GCE things. I expect GCE to be
+                // ripped out soon so this shouldn't matter soon.
+                StructurallyRelateAliases::No if !self.cx().features().generic_const_exprs() => {
+                    Ok(self.generalize_alias_term(uv.into())?.expect_const())
+                }
+                _ => {
+                    let ty::UnevaluatedConst { def, args } = uv;
+                    let args = self.relate_with_variance(
+                        ty::Invariant,
+                        ty::VarianceDiagInfo::default(),
+                        args,
+                        args,
+                    )?;
+                    Ok(ty::Const::new_unevaluated(self.cx(), ty::UnevaluatedConst { def, args }))
+                }
+            },
             ty::ConstKind::Placeholder(placeholder) => {
                 if self.for_universe.can_name(placeholder.universe) {
                     Ok(c)
