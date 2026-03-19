@@ -1190,10 +1190,14 @@ rustc_queries! {
         cache_on_disk_if { tcx.is_typeck_child(key.to_def_id()) }
     }
 
-    /// Return the live symbols in the crate for dead code check.
+    /// Return the live symbols in the crate for dead code checks.
     ///
-    /// The second return value maps from ADTs to ignored derived traits (e.g. Debug and Clone).
+    /// The return values are:
+    /// - phase-1 live symbols (before reachable-public dead-code seeding)
+    /// - final live symbols for dead-code
+    /// - a map from ADTs to ignored derived traits (e.g. Debug and Clone)
     query live_symbols_and_ignored_derived_traits(_: ()) -> &'tcx Result<(
+        LocalDefIdSet,
         LocalDefIdSet,
         LocalDefIdMap<FxIndexSet<DefId>>,
     ), ErrorGuaranteed> {
