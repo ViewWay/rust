@@ -68,6 +68,32 @@ pub(crate) fn last_set_in(
 }
 
 #[inline]
+pub(crate) fn insert(domain_size: usize, words: &mut [Word], index: usize) -> bool {
+    assert!(index < domain_size, "inserting at index {index} but domain size is {domain_size}");
+
+    let (word_index, mask) = word_index_and_mask(index);
+
+    let slot = &mut words[word_index];
+    let old_word = *slot;
+    let new_word = old_word | mask;
+    *slot = new_word;
+    new_word != old_word
+}
+
+#[inline]
+pub(crate) fn remove(domain_size: usize, words: &mut [Word], index: usize) -> bool {
+    assert!(index < domain_size, "inserting at index {index} but domain size is {domain_size}");
+
+    let (word_index, mask) = word_index_and_mask(index);
+
+    let slot = &mut words[word_index];
+    let old_word = *slot;
+    let new_word = old_word & !mask;
+    *slot = new_word;
+    new_word != old_word
+}
+
+#[inline]
 pub(crate) fn insert_range(
     domain_size: usize,
     words: &mut [Word],
