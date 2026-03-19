@@ -145,6 +145,7 @@ declare_lint_pass! {
         UNUSED_MACROS,
         UNUSED_MACRO_RULES,
         UNUSED_MUT,
+        UNUSED_PUB_ITEMS_IN_BINARY,
         UNUSED_QUALIFICATIONS,
         UNUSED_UNSAFE,
         UNUSED_VARIABLES,
@@ -779,6 +780,29 @@ declare_lint! {
     pub DEAD_CODE,
     Warn,
     "detect unused, unexported items"
+}
+
+declare_lint! {
+    /// The `unused_pub_items_in_binary` lint detects public items in executable
+    /// crates that are not used.
+    ///
+    /// ### Example
+    ///
+    /// ```rust
+    /// pub fn helper() {}
+    /// ```
+    ///
+    /// {{produces}}
+    ///
+    /// ### Explanation
+    ///
+    /// In executable crates, `pub` items are often not part of a public API.
+    /// This lint helps detect such items when they are never used within the
+    /// crate.
+    pub UNUSED_PUB_ITEMS_IN_BINARY,
+    Allow,
+    "detect public items in executable crates that are never used",
+    crate_level_only
 }
 
 declare_lint! {
