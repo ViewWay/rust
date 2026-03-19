@@ -244,6 +244,14 @@ pub fn wavefrontsize() -> u32 {
 /// Synchronize all wavefronts in a workgroup.
 ///
 /// Each wavefronts in a workgroup waits at the barrier until all wavefronts in the workgroup arrive at a barrier.
+///
+/// This intrinsic has special restrictions regarding control-flow, e.g. must not be moved in or out
+/// of control-flow. This property is also called "convergent", (see the [LLVM documentation] for
+/// detailed information).
+/// Rust has limited support for convergent operations, using them may result in incorrect code under
+/// some circumstances.
+///
+/// [LLVM documentation]: https://llvm.org/docs/ConvergentOperations.html
 #[inline]
 #[unstable(feature = "stdarch_amdgpu", issue = "149988")]
 pub fn s_barrier() {
