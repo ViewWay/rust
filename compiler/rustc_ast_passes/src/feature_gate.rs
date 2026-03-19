@@ -3,8 +3,8 @@ use rustc_ast::{self as ast, AttrVec, GenericBound, NodeId, PatKind, attr, token
 use rustc_attr_parsing::AttributeParser;
 use rustc_errors::msg;
 use rustc_feature::{AttributeGate, BUILTIN_ATTRIBUTE_MAP, BuiltinAttribute, Features};
-use rustc_hir::Attribute;
 use rustc_hir::attrs::AttributeKind;
+use rustc_hir::{Attribute, Target};
 use rustc_session::Session;
 use rustc_session::parse::{feature_err, feature_warn};
 use rustc_span::{DUMMY_SP, Span, Spanned, Symbol, sym};
@@ -663,6 +663,7 @@ fn maybe_stage_features(sess: &Session, features: &Features, krate: &ast::Crate)
             sess,
             &krate.attrs,
             sym::feature,
+            Target::Crate,
             DUMMY_SP,
             krate.id,
             Some(&features),
