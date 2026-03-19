@@ -79,11 +79,11 @@ impl<'hir, R: ResolverAstLoweringExt<'hir>> ItemLowerer<'_, 'hir, R> {
         if let hir::MaybeOwner::Phantom = owner {
             let node = self.ast_index[def_id];
 
-            let disambig = if let Some(info) = self.resolver.delegation_infos.get_mut(&def_id) {
+            let disambig = if let Some(disambig) = self.resolver.delegation_disambiguator(def_id) {
                 // Here we use disambiguator that we saved from resolve stage, as we generate
                 // new def_ids with names from other code, there may be situations when there
                 // will be def path hash collision (see #153410).
-                std::mem::take(&mut info.disambig)
+                disambig.steal()
             } else {
                 DisambiguatorState::new()
             };

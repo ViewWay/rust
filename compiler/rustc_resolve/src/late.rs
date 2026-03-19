@@ -3819,7 +3819,7 @@ impl<'a, 'ast, 'ra, 'tcx> LateResolutionVisitor<'a, 'ast, 'ra, 'tcx> {
 
         self.visit_path(&delegation.path);
 
-        let info = self.r.delegation_infos.entry(self.r.local_def_id(item_id)).or_default();
+        let info = &mut self.r.delegation_infos.entry(self.r.local_def_id(item_id)).or_default().0;
         info.attrs = create_delegation_attrs(attrs);
         info.resolution_node = if is_in_trait_impl { item_id } else { delegation.id };
 

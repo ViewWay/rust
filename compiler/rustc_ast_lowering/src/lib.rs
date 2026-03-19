@@ -44,6 +44,7 @@ use rustc_attr_parsing::{AttributeParser, Late, OmitDoc};
 use rustc_data_structures::fingerprint::Fingerprint;
 use rustc_data_structures::sorted_map::SortedMap;
 use rustc_data_structures::stable_hasher::{HashStable, StableHasher};
+use rustc_data_structures::steal::Steal;
 use rustc_data_structures::sync::spawn;
 use rustc_data_structures::tagged_ptr::TaggedRef;
 use rustc_errors::{DiagArgFromDisplay, DiagCtxtHandle};
@@ -315,7 +316,11 @@ impl<'tcx> ResolverAstLowering<'tcx> {
     }
 
     fn delegation_info(&self, id: LocalDefId) -> Option<&DelegationInfo> {
-        self.delegation_infos.get(&id)
+        self.delegation_infos.get(&id).map(|(i, _)| i)
+    }
+
+    fn delegation_disambiguator(&self, id: LocalDefId) -> Option<&Steal<DisambiguatorState>> {
+        self.delegation_infos.get(&id).map(|(_, d)| d)
     }
 
     fn opt_local_def_id(&self, id: NodeId) -> Option<LocalDefId> {

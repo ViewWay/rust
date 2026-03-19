@@ -1340,7 +1340,7 @@ pub struct Resolver<'ra, 'tcx> {
     /// Generic args to suggest for required params (e.g. `<'_>`, `<_, _>`), if any.
     item_required_generic_args_suggestions: FxHashMap<LocalDefId, String> = default::fx_hash_map(),
     delegation_fn_sigs: LocalDefIdMap<DelegationFnSig> = Default::default(),
-    delegation_infos: LocalDefIdMap<DelegationInfo> = Default::default(),
+    delegation_infos: LocalDefIdMap<(DelegationInfo, DisambiguatorState)> = Default::default(),
 
     main_def: Option<MainDefinition> = None,
     trait_impls: FxIndexMap<DefId, Vec<LocalDefId>>,
@@ -1528,7 +1528,7 @@ impl<'tcx> Resolver<'_, 'tcx> {
 
         if is_delegation {
             let data = def_kind.def_path_data(name);
-            self.delegation_infos.entry(parent).or_default().disambig.next(parent, data);
+            self.delegation_infos.entry(parent).or_default().1.next(parent, data);
         }
 
         // FIXME: remove `def_span` body, pass in the right spans here and call `tcx.at().create_def()`
@@ -1867,7 +1867,11 @@ impl<'ra, 'tcx> Resolver<'ra, 'tcx> {
             lifetime_elision_allowed: self.lifetime_elision_allowed,
             lint_buffer: Steal::new(self.lint_buffer),
             delegation_fn_sigs: self.delegation_fn_sigs,
-            delegation_infos: self.delegation_infos,
+            delegation_infos: self
+                .delegation_infos
+                .into_items()
+                .map(|(key, (i, d))| (key, (i, Steal::new(d))))
+                .collect(),
         };
         ResolverOutputs { global_ctxt, ast_lowering }
     }

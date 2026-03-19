@@ -224,7 +224,8 @@ pub struct ResolverAstLowering<'tcx> {
     /// Information about functions signatures for delegation items expansion
     pub delegation_fn_sigs: LocalDefIdMap<DelegationFnSig>,
     // Information about delegations which is used when handling recursive delegations
-    pub delegation_infos: LocalDefIdMap<DelegationInfo>,
+    // and disambiguator associated with each delegation.
+    pub delegation_infos: LocalDefIdMap<(DelegationInfo, Steal<DisambiguatorState>)>,
 }
 
 bitflags::bitflags! {
@@ -243,16 +244,11 @@ pub struct DelegationInfo {
     // for details see https://github.com/rust-lang/rust/issues/118212#issuecomment-2160686914
     pub resolution_node: ast::NodeId,
     pub attrs: DelegationAttrs,
-    pub disambig: DisambiguatorState,
 }
 
 impl Default for DelegationInfo {
     fn default() -> DelegationInfo {
-        DelegationInfo {
-            resolution_node: DUMMY_NODE_ID,
-            attrs: Default::default(),
-            disambig: Default::default(),
-        }
+        DelegationInfo { resolution_node: DUMMY_NODE_ID, attrs: Default::default() }
     }
 }
 
